@@ -13,9 +13,3 @@ class Employee:
     def get_salary(self):
         
         return f"{self.full_name.title()} salary is {self.salary}"
-
-
-wan = Employee("wan","ting",10000)
-wan.get_salary()
-wan.give_raise(15000)
-wan.get_salary()
