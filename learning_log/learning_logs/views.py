@@ -1,6 +1,6 @@
 from multiprocessing import context
 from site import ENABLE_USER_SITE
-from django.shortcuts import render,redirect
+from django.shortcuts import render,redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.http import Http404
 
@@ -12,6 +12,11 @@ def index(request):
     """学习笔记的主页"""
     return render(request,'learning_logs/index.html')
 
+def check_topic_owner(request, topic):
+    """检查topic是否属于当前用户"""
+    if topic.owner != request.user:
+        raise Http404
+
 @login_required
 def topics(request):
     """显示所有的主题"""
@@ -22,10 +27,9 @@ def topics(request):
 @login_required
 def topic(request,topic_id):
     """显示单个主题下的条目"""
-    topic = Topic.objects.get(id=topic_id)
+    topic = get_object_or_404(Topic, id=topic_id)
     # 确认请求的主题属于当前用户
-    if topic.owner != request.user:
-        raise Http404
+    check_topic_owner(request,topic)
 
     entries = topic.entry_set.order_by('-date_added')
     context = {'topic': topic, 'entries': entries}
@@ -41,7 +45,9 @@ def new_topic(request):
         # POST提交的数据： 对数据进行处理
         form = TopicForm(data=request.POST)
         if form.is_valid():
-            form.save()
+            new_topic = form.save(commit=False)
+            new_topic.owner = request.user
+            new_topic.save()
             return redirect('learning_logs:topics')
 
     # 显示空表单或指出表单数据无效
@@ -51,7 +57,9 @@ def new_topic(request):
 @login_required
 def new_entry(request, topic_id):
     """在特定主题中添加新条目"""
-    topic = Topic.objects.get(id=topic_id)
+    topic = get_object_or_404(Topic, id=topic_id)
+    # 确认请求的主题属于当前用户
+    check_topic_owner(request,topic)    
 
     if request.method != 'POST':
         # 未提交数据： 创建一个新表单
@@ -72,8 +80,10 @@ def new_entry(request, topic_id):
 @login_required
 def edit_entry(request, entry_id):
     """编辑既有条目"""
-    entry = Entry.objects.get(id=entry_id)
+    entry = get_object_or_404(Entry, id=entry_id)
     topic = entry.topic
+    # 确认请求的主题属于当前用户
+    check_topic_owner(request,topic)
 
     if request.method != 'POST':
         # 初次请求： 使用当前条目的填充表单
