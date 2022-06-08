@@ -1,4 +1,3 @@
-from lib2to3.pgen2.pgen import DFAState
 
 
 prompt = "\nTell me something, and I will repeat it back to you:"
